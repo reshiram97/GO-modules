@@ -8,15 +8,25 @@ import (
 );
 
 func routeHandler(app *fiber.App){
+	// Middlewares
 	app.Use("/api/*", middleware.Protectedhandler)
-	app.Get("/api/test",routes.TestRoute)
+
+	// Admin Routes
+	app.Get("/",routes.TestRoute)
 	app.Get("/getusers",routes.FindAllUsers)
 	app.Get("/getuser/:id",routes.FindUserById)
-	app.Post("/createuser",routes.RegisterUser)
-	app.Post("/login",routes.LoginUser)
 	app.Delete("/removeuser/:id",routes.DeleteUser)
-	app.Post("/api/createpost",routes.AddPost);
-	// app.Get("/posts",routes.FindPosts)
+	
+	// User Routes
+	app.Post("/register",routes.RegisterUser)
+	app.Post("/login",routes.LoginUser)
+	app.Get("/logout",routes.LogoutUser)
+	
+	app.Post("/api/create",routes.AddPost)
+	app.Delete("/api/remove/:id",routes.RemovePost)
+	app.Put("/api/update",routes.UpdatePost)
+	app.Get("/api/posts",routes.GetPosts)
+	app.Get("/api/post/:id",routes.GetPost)
 }
 func main() {
 	app:= fiber.New();

@@ -33,6 +33,9 @@ func TestRoute(c *fiber.Ctx) error {
 	return c.SendString("Hello")
 }
 
+
+
+
 func RegisterUser(c *fiber.Ctx) error {
 	var user models.User
 	if err:= c.BodyParser(&user); err!=nil {
@@ -62,6 +65,11 @@ func LoginUser(c *fiber.Ctx) error {
 	}
 	c.Set("Authorization",tokenString)
 	return c.Status(200).SendString(tokenString)
+}
+
+func LogoutUser(c* fiber.Ctx) error {
+	c.Request().Header.Del("Authorization")
+	return c.Status(200).JSON(fiber.Map{"Msg":"User Logged Out"})
 }
 
 func DeleteUser(c *fiber.Ctx) error {
@@ -105,9 +113,64 @@ func AddPost(c *fiber.Ctx) error {
 	if err:= db.First(&user,"email=?",email).Error; err!=nil {
 		return c.Status(404).SendString("User not found")
 	}
-	post.User = user.Id
+	post.UserID = user.Id
 	post.Id = createNewUUID()
 	db.Create(&post)
 	return c.Status(200).JSON(fiber.Map{"Status":"Post Created Success"})
 }
 
+func GetPosts(c *fiber.Ctx) error {
+	var user models.User
+	var posts []models.Post
+	email,_ := jwt.ExtractClaims(c.Get("Authorization"))
+	if email=="Invalid" {
+		return c.Status(fiber.StatusUnauthorized).SendString("Unauthorized - User not logged in")
+	}
+	if err:= db.First(&user,"email=?",email).Error; err!=nil {
+		return c.Status(404).SendString("User not found")
+	}
+	if err := db.Preload("Posts").First(&user, "email=?", email).Error; err != nil {
+		return c.Status(404).SendString("User not found")
+	}
+	posts = user.Posts
+	return c.Status(200).JSON(fiber.Map{"Posts":posts}) 
+}
+
+func GetPost(c *fiber.Ctx) error {
+	id:= c.Params("id")
+	var post models.Post
+	if err:= db.First(&post,"id=?",id).Error; err!=nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error":err})
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"post":post})
+}
+
+
+func UpdatePost(c *fiber.Ctx) error {
+	var user models.User
+	var post models.Post
+	email,_ := jwt.ExtractClaims(c.Get("Authorization"))
+	if email=="Invalid" {
+		return c.Status(fiber.StatusUnauthorized).SendString("Unauthorized - User not logged in")
+	}
+	if err:= db.First(&user,"email=?",email).Error; err!=nil {
+		return c.Status(404).SendString("User not found")
+	}
+	if err:= c.BodyParser(&post); err!=nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error":err})
+	}
+	post.UserID = user.Id
+	if err:= db.Save(&post).Error; err!=nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error":err})
+	}
+	return c.Status(200).JSON(fiber.Map{"Status":"Updation Successful"})	
+}
+
+func RemovePost(c *fiber.Ctx) error {
+	id:= c.Params("id")
+	var post models.Post
+	if err:= db.Unscoped().Delete(&post,"id=?",id).Error; err!=nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error":err})
+	}
+	return c.Status(200).JSON(fiber.Map{"Status":"Deletion Successful"})	
+}
