@@ -9,6 +9,7 @@ type User struct {
 	gorm.Model
 	Id    uuid.UUID `json:"id" gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	Name  string    `json:"name"`
+	Password string `json:"password"`
 	Email string    `json:"email"`
 	Phone string    `json:"phone"`    
 }
